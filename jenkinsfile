@@ -1,0 +1,50 @@
+pipeline {
+    agent any 
+    environments {
+        ENV = "${env.BRANCH_NAME}"
+        TF_WORKDIR ="environments/${env.BRANCH_NAME}"
+    }
+    stages{
+        stage('checkout'){
+            steps{
+                git branch:"${env.Branch_NAME}", url 'https://github.com/aakash-rio/infra-feployment-pipeline.git'
+            }
+        }
+    }
+    stage('Terraform init'){
+        steps{
+            dir("${TF_WorkDIR}"){
+              sh 'Terraform init'
+            }
+        }
+    }
+    stage('Terraform plan'){
+        steps{
+            dir("${TF_WORKDIR}"){
+                sh 'terraform plan -out = tfplan'
+                sh 'terraform show -no-color tfplan > tfplan.txt'
+                sh 'cat tfplan.txt'
+            }
+        }
+    }
+    stage('Approval'){
+        /* 
+        when{
+            expression{env.BRANCH_NAME == 'production' }
+        }
+        */
+        steps{
+            input message :"approve the deployment to production?", ok: 'deploy'
+        }
+    }
+    stage('Terraform apply'){
+        steps{
+            dir("${TF_WORKDIR}"){
+               sh 'terraform apply tfplan'
+            }
+        }
+    }
+}
+
+
+
